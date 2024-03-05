@@ -234,8 +234,8 @@ function getJSON(obj) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  return Object.setPrototypeOf(JSON.parse(json), proto);
 }
 
 /**
@@ -264,8 +264,17 @@ function fromJSON(/* proto, json */) {
  *      { country: 'Russia',  city: 'Saint Petersburg' }
  *    ]
  */
-function sortCitiesArray(/* arr */) {
-  throw new Error('Not implemented');
+function sortCitiesArray(arr) {
+  const copy = arr;
+  return copy.sort((item1, item2) => {
+    if (item1.country > item2.country) {
+      return 1;
+    }
+    if (item1.country < item2.country) {
+      return -1;
+    }
+    return item1.city > item2.city ? 1 : -1;
+  });
 }
 
 /**
