@@ -307,8 +307,18 @@ function sortCitiesArray(arr) {
  *    "Poland" => ["Lodz"]
  *   }
  */
-function group(/* array, keySelector, valueSelector */) {
-  throw new Error('Not implemented');
+function group(array, keySelector, valueSelector) {
+  const map = new Map();
+  for (let i = 0; i < array.length; i += 1) {
+    const key = keySelector(array[i]);
+    const value = valueSelector(array[i]);
+    if (map.has(key)) {
+      map.get(key).push(value);
+    } else {
+      map.set(key, [value]);
+    }
+  }
+  return map;
 }
 
 /**
@@ -365,33 +375,134 @@ function group(/* array, keySelector, valueSelector */) {
  *  For more examples see unit tests.
  */
 
+class ElementBuilder {
+  constructor() {
+    this.last = '';
+    this.selectorArr = [];
+    this.order = [
+      'element',
+      'id',
+      'class',
+      'attr',
+      'pseudoClass',
+      'pseudoElement',
+    ];
+    this.finalStr = '';
+  }
+
+  element(value) {
+    if (this.last === 'element')
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    this.selectorArr.push(['element', `${value}`]);
+    this.last = 'element';
+    return this;
+  }
+
+  id(value) {
+    if (this.last === 'id')
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    this.selectorArr.push(['id', `#${value}`]);
+    this.last = 'id';
+    return this;
+  }
+
+  class(value) {
+    this.selectorArr.push(['class', `.${value}`]);
+    return this;
+  }
+
+  attr(value) {
+    this.selectorArr.push(['attr', `[${value}]`]);
+    return this;
+  }
+
+  pseudoClass(value) {
+    this.selectorArr.push(['pseudoClass', `:${value}`]);
+    return this;
+  }
+
+  pseudoElement(value) {
+    if (this.last === 'pseudoElement')
+      throw new Error(
+        'Element, id and pseudo-element should not occur more then one time inside the selector'
+      );
+    this.selectorArr.push(['pseudoElement', `::${value}`]);
+    this.last = 'pseudoElement';
+    return this;
+  }
+
+  combine(s1, combinator, s2) {
+    if (!s1 && !s2) return this;
+    if (this.finalStr) {
+      this.finalStr = ` ${combinator} ${this.finalStr}`;
+      this.finalStr = `${this.stringify()}`;
+      return this;
+    }
+    const str1 = `${this.stringify()}`;
+    const str2 = `${this.stringify()}`;
+    this.finalStr = `${str2} ${combinator} ${str1}`;
+    return this;
+  }
+
+  stringify() {
+    let result = this.finalStr;
+    this.finalStr = '';
+    if (this.finalStr && this.selectorArr.length === 0) {
+      return result;
+    }
+    for (let i = this.selectorArr.length - 1; i >= 0; i -= 1) {
+      if (
+        i !== this.selectorArr.length - 1 &&
+        this.order.indexOf(this.selectorArr[i][0]) >
+          this.order.indexOf(this.selectorArr[i + 1][0])
+      ) {
+        this.selectorArr = this.selectorArr.slice(0, i + 1);
+        return result;
+      }
+      result = this.selectorArr[i][1] + result;
+    }
+    this.selectorArr.length = 0;
+    return result;
+  }
+}
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  css: new ElementBuilder(),
+
+  element(value) {
+    return this.css.element(value);
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return this.css.id(value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return this.css.class(value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return this.css.attr(value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return this.css.pseudoClass(value);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    this.css.pseudoElement(value);
+    return this.css;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return this.css.combine(selector1, combinator, selector2);
+  },
+
+  stringify() {
+    return this.css.stringify();
   },
 };
 
